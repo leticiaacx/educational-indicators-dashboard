@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System - Painel Indicadores Educacionais
+*/
+
+@layer base {
+  :root {
+    --background: 180 10% 98%;
+    --foreground: 180 50% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 180 50% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 180 50% 10%;
+
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 180 20% 94%;
+    --secondary-foreground: 180 50% 15%;
+
+    --muted: 180 15% 92%;
+    --muted-foreground: 180 10% 40%;
+
+    --accent: 174 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 180 20% 88%;
+    --input: 180 20% 88%;
+    --ring: 174 72% 40%;
+
+    --radius: 0.75rem;
+
+    /* Custom metric card colors */
+    --metric-blue: 200 80% 50%;
+    --metric-blue-light: 200 80% 95%;
+    --metric-green: 150 60% 40%;
+    --metric-green-light: 150 60% 92%;
+    --metric-orange: 30 90% 50%;
+    --metric-orange-light: 30 90% 92%;
+    --metric-purple: 270 60% 55%;
+    --metric-purple-light: 270 60% 94%;
+
+    /* Chart colors */
+    --chart-1: 174 72% 40%;
+    --chart-2: 200 80% 50%;
+    --chart-3: 150 60% 40%;
+    --chart-4: 30 90% 50%;
+    --chart-5: 270 60% 55%;
+    --chart-6: 340 70% 55%;
+
+    --sidebar-background: 180 15% 97%;
+    --sidebar-foreground: 180 30% 20%;
+    --sidebar-primary: 174 72% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 20% 92%;
+    --sidebar-accent-foreground: 180 30% 20%;
+    --sidebar-border: 180 20% 88%;
+    --sidebar-ring: 174 72% 40%;
+  }
+
+  .dark {
+    --background: 180 30% 8%;
+    --foreground: 180 10% 95%;
+
+    --card: 180 25% 12%;
+    --card-foreground: 180 10% 95%;
+
+    --popover: 180 25% 12%;
+    --popover-foreground: 180 10% 95%;
+
+    --primary: 174 65% 50%;
+    --primary-foreground: 180 30% 8%;
+
+    --secondary: 180 20% 18%;
+    --secondary-foreground: 180 10% 90%;
+
+    --muted: 180 20% 18%;
+    --muted-foreground: 180 10% 60%;
+
+    --accent: 174 60% 45%;
+    --accent-foreground: 180 30% 8%;
+
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 180 20% 22%;
+    --input: 180 20% 22%;
+    --ring: 174 65% 50%;
+
+    /* Custom metric card colors - dark mode */
+    --metric-blue: 200 75% 55%;
+    --metric-blue-light: 200 40% 18%;
+    --metric-green: 150 55% 45%;
+    --metric-green-light: 150 30% 16%;
+    --metric-orange: 30 85% 55%;
+    --metric-orange-light: 30 40% 16%;
+    --metric-purple: 270 55% 60%;
+    --metric-purple-light: 270 30% 18%;
+
+    --sidebar-background: 180 25% 10%;
+    --sidebar-foreground: 180 10% 90%;
+    --sidebar-primary: 174 65% 50%;
+    --sidebar-primary-foreground: 180 30% 8%;
+    --sidebar-accent: 180 20% 16%;
+    --sidebar-accent-foreground: 180 10% 90%;
+    --sidebar-border: 180 20% 20%;
+    --sidebar-ring: 174 65% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  .card-shadow {
+    box-shadow: 0 4px 12px -2px hsl(var(--primary) / 0.08), 
+                0 2px 6px -2px hsl(var(--foreground) / 0.04);
+  }
+  
+  .card-shadow-hover {
+    box-shadow: 0 8px 20px -4px hsl(var(--primary) / 0.12), 
+                0 4px 10px -4px hsl(var(--foreground) / 0.06);
+  }
+}

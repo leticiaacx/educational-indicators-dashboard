@@ -37,26 +37,33 @@ interface BrazilMapProps {
   anoFim: number;
 }
 
-function getRedColorScale(value: number, min: number, max: number, indicador: string): string {
+// Escala divergente: Azul (bom) → Branco (neutro) → Vermelho (ruim)
+function getDivergentColorScale(value: number, min: number, max: number, indicador: string): string {
   if (isNaN(value) || value === 0) return "hsl(215, 20%, 30%)";
-
+  
   const range = max - min;
-  if (range === 0) return "hsl(0, 70%, 50%)";
-
+  if (range === 0) return "hsl(210, 70%, 50%)";
+  
   let normalized = (value - min) / range;
-
-  // For TDI, Reprovacao, Abandono: high values = bad (dark), low values = good (light)
-  // For Aprovacao: low values = bad (dark), high values = good (light)
-  // So for Aprovacao, we invert
-  if (indicador === 'aprovacao') {
+  
+  const isHighBad = ['tdi', 'reprovacao', 'abandono'].includes(indicador);
+  if (!isHighBad) {
     normalized = 1 - normalized;
   }
-
-  // normalized 0 = light (good), normalized 1 = dark (bad)
-  const lightness = 70 - normalized * 50; // 70% (light/good) to 20% (dark/bad)
-  const saturation = 65 + normalized * 15; // 65% to 80%
-
-  return `hsl(0, ${saturation}%, ${lightness}%)`;
+  
+  if (normalized <= 0.5) {
+    // Blue range: from dark blue (very good) to light blue/white
+    const t = normalized * 2;
+    const saturation = 80 - t * 50;
+    const lightness = 35 + t * 45;
+    return `hsl(210, ${saturation}%, ${lightness}%)`;
+  } else {
+    // Red range: from white/pink to dark red (very bad)
+    const t = (normalized - 0.5) * 2;
+    const saturation = 30 + t * 50;
+    const lightness = 80 - t * 45;
+    return `hsl(0, ${saturation}%, ${lightness}%)`;
+  }
 }
 
 interface StateEvolution {
@@ -142,7 +149,7 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
               const stateAbbr = getStateAbbr(geo);
               const stateName = getStateName(geo);
               const value = stateStats[stateAbbr] || 0;
-              const fillColor = getRedColorScale(value, minValue, maxValue, indicador);
+              const fillColor = getDivergentColorScale(value, minValue, maxValue, indicador);
 
               const isSelected = selectedEstados.length === 0 || selectedEstados.includes(stateAbbr);
               const isInRegion = regiao === 'Todas' || estadosInfo[stateAbbr]?.regiao === regiao;
@@ -312,8 +319,8 @@ function BrazilMapComponent({
           <p className="text-sm font-medium mb-1">{indicadorLabel} por Estado</p>
           <p className="text-xs text-muted-foreground">
             {isHighBad
-              ? '🔴 Vermelho claro = Menor valor (BOM) | 🔴 Vermelho escuro = Maior valor (RUIM)'
-              : '🔴 Vermelho claro = Maior valor (BOM) | 🔴 Vermelho escuro = Menor valor (RUIM)'
+              ? '🔵 Azul = Menor distorção (BOM) | 🔴 Vermelho = Maior distorção (RUIM)'
+              : '🔵 Azul = Maior valor (BOM) | 🔴 Vermelho = Menor valor (RUIM)'
             }
           </p>
         </div>
@@ -343,29 +350,50 @@ function BrazilMapComponent({
         </div>
 
         {/* Color Legend */}
+{/* Color Legend */}
         <div className="flex flex-col items-center gap-2 p-3 bg-muted/20 rounded-lg">
           <p className="text-xs font-medium">Legenda de Cores</p>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center">
-              <span className="text-xs mr-2">{isHighBad ? 'Melhor (BOM)' : 'Pior (RUIM)'} ({minValue.toFixed(1)}%)</span>
-              <div className="flex h-4 rounded overflow-hidden">
-                {[0, 0.2, 0.4, 0.6, 0.8, 1].map((t, i) => (
-                  <div
-                    key={i}
-                    className="w-6 h-full"
-                    style={{
-                      backgroundColor: `hsl(0, ${65 + t * 15}%, ${70 - t * 50}%)`
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="text-xs ml-2">{isHighBad ? 'Pior (RUIM)' : 'Melhor (BOM)'} ({maxValue.toFixed(1)}%)</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Melhor (BOM) ({isHighBad ? minValue.toFixed(1) : maxValue.toFixed(1)}%)
+            </span>
+            <div className="flex h-5 rounded overflow-hidden border border-border/30">
+              {/* Gradient fixo: Azul (bom) → Branco (neutro) → Vermelho (ruim) */}
+              {[0, 0.17, 0.33, 0.5, 0.67, 0.83, 1].map((t, i) => {
+                let color: string;
+                if (t <= 0.5) {
+                  const s = t * 2;
+                  const saturation = 80 - s * 50;
+                  const lightness = 35 + s * 45;
+                  color = `hsl(210, ${saturation}%, ${lightness}%)`;
+                } else {
+                  const s = (t - 0.5) * 2;
+                  const saturation = 30 + s * 50;
+                  const lightness = 80 - s * 45;
+                  color = `hsl(0, ${saturation}%, ${lightness}%)`;
+                }
+                return (
+                  <div key={i} className="w-6 h-full" style={{ backgroundColor: color }} />
+                );
+              })}
             </div>
+            <span className="text-xs text-muted-foreground">
+              Pior (RUIM) ({isHighBad? maxValue.toFixed(1) : minValue.toFixed(1)}%)
+            </span>
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>🔴 Claro = BOM</span>
-            <span>🟤 Escuro = RUIM</span>
-            <span>⬜ Cinza = Sem dados</span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(210, 80%, 45%)' }}></span>
+              Azul = BOM
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(0, 70%, 45%)' }}></span>
+              Vermelho = RUIM
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-muted-foreground/30"></span>
+              Cinza = Sem dados
+            </span>
           </div>
         </div>
 

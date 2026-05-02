@@ -1,7 +1,6 @@
-import { useMemo, memo } from "react";
-import { ComposableMap, Geographies, Geography, Marker, Annotation } from "react-simple-maps";
+import { useMemo, memo, useState, useCallback } from "react";
+import { ComposableMap, Geographies, Geography, Annotation } from "react-simple-maps";
 import { MunicipalityData, estadosInfo, getIndicadorValue } from "@/data/educationalData";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
 
 const BRAZIL_TOPOJSON_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
@@ -77,6 +76,7 @@ interface StateEvolution {
 interface SingleMapProps {
   data: MunicipalityData[];
   indicador: string;
+  indicadorLabel: string;
   ano: number;
   selectedEstados: string[];
   regiao: string;
@@ -85,7 +85,20 @@ interface SingleMapProps {
   title: string;
 }
 
-function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, maxValue, title }: SingleMapProps) {
+interface MapTooltipState {
+  visible: boolean;
+  x: number;
+  y: number;
+  stateName: string;
+  stateAbbr: string;
+  value: number;
+}
+
+function SingleMap({ data, indicador, indicadorLabel, ano, selectedEstados, regiao, minValue, maxValue, title }: SingleMapProps) {
+  const [tooltip, setTooltip] = useState<MapTooltipState>({
+    visible: false, x: 0, y: 0, stateName: '', stateAbbr: '', value: 0,
+  });
+
   const stateStats = useMemo(() => {
     const yearData = data.filter(d => d.ano === ano);
     let filteredData = yearData;
@@ -115,14 +128,13 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
   }, [data, indicador, ano, selectedEstados, regiao]);
 
   const getStateName = (geo: { properties: { name?: string; sigla?: string } }) =>
-    geo.properties.name || geo.properties.sigla || "";
+    geo.properties.name || geo.properties.sigla || '';
 
   const getStateAbbr = (geo: { properties: { name?: string; sigla?: string } }) => {
     const name = getStateName(geo);
-    return stateNameToAbbr[name] || geo.properties.sigla || "";
+    return stateNameToAbbr[name] || geo.properties.sigla || '';
   };
 
-  // Get list of states to display labels for
   const visibleStates = useMemo(() => {
     if (selectedEstados.length > 0) return selectedEstados;
     if (regiao !== 'Todas') {
@@ -133,15 +145,30 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
     return Object.keys(stateCoordinates);
   }, [selectedEstados, regiao]);
 
+  const handleMouseEnter = useCallback(
+    (stateName: string, stateAbbr: string, value: number, evt: React.MouseEvent) => {
+      setTooltip({ visible: true, x: evt.clientX, y: evt.clientY, stateName, stateAbbr, value });
+    },
+    []
+  );
+
+  const handleMouseMove = useCallback((evt: React.MouseEvent) => {
+    setTooltip(prev => prev.visible ? { ...prev, x: evt.clientX, y: evt.clientY } : prev);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+  }, []);
+
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center relative">
       <h3 className="text-sm font-medium mb-2">{title}</h3>
       <ComposableMap
         projection="geoMercator"
         projectionConfig={{ scale: 450, center: [-54, -15] }}
         width={400}
         height={380}
-        style={{ width: "100%", maxWidth: "400px", height: "auto" }}
+        style={{ width: '100%', maxWidth: '400px', height: 'auto' }}
       >
         <Geographies geography={BRAZIL_TOPOJSON_URL}>
           {({ geographies }) =>
@@ -156,34 +183,29 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
               const shouldHighlight = isSelected && isInRegion;
 
               return (
-                <Tooltip key={geo.rsmKey}>
-                  <TooltipTrigger asChild>
-                    <Geography
-                      geography={geo}
-                      fill={shouldHighlight ? fillColor : "hsl(215, 20%, 25%)"}
-                      stroke="hsl(215, 20%, 50%)"
-                      strokeWidth={0.5}
-                      style={{
-                        default: { outline: "none" },
-                        hover: {
-                          fill: shouldHighlight ? fillColor : "hsl(215, 20%, 35%)",
-                          outline: "none",
-                          strokeWidth: 1.5,
-                          stroke: "hsl(215, 20%, 70%)"
-                        },
-                        pressed: { outline: "none" },
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-popover border-border">
-                    <p className="font-medium">{stateName} ({stateAbbr})</p>
-                    {value > 0 ? (
-                      <p className="text-sm">Média: <span className="font-medium">{value.toFixed(2)}%</span></p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Sem dados</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  fill={shouldHighlight ? fillColor : 'hsl(215, 20%, 25%)'}
+                  stroke="hsl(215, 20%, 50%)"
+                  strokeWidth={0.5}
+                  style={{
+                    default: { outline: 'none', cursor: 'pointer' },
+                    hover: {
+                      fill: shouldHighlight
+                        ? getDivergentColorScale(value, minValue, maxValue, indicador)
+                        : 'hsl(215, 20%, 35%)',
+                      outline: 'none',
+                      strokeWidth: 2,
+                      stroke: 'hsl(215, 20%, 80%)',
+                      filter: 'brightness(1.15)',
+                    },
+                    pressed: { outline: 'none' },
+                  }}
+                  onMouseEnter={(evt) => handleMouseEnter(stateName, stateAbbr, value, evt as unknown as React.MouseEvent)}
+                  onMouseMove={(evt) => handleMouseMove(evt as unknown as React.MouseEvent)}
+                  onMouseLeave={handleMouseLeave}
+                />
               );
             })
           }
@@ -206,12 +228,12 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
               <text
                 textAnchor="middle"
                 alignmentBaseline="middle"
-                fill={value ? "hsl(0, 0%, 100%)" : "hsl(215, 20%, 60%)"}
+                fill={value ? 'hsl(0, 0%, 100%)' : 'hsl(215, 20%, 60%)'}
                 fontSize={8}
                 fontWeight="bold"
                 style={{
-                  textShadow: "0 0 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5)",
-                  pointerEvents: "none"
+                  textShadow: '0 0 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5)',
+                  pointerEvents: 'none',
                 }}
               >
                 {uf}
@@ -220,6 +242,36 @@ function SingleMap({ data, indicador, ano, selectedEstados, regiao, minValue, ma
           );
         })}
       </ComposableMap>
+
+      {/* Custom mouse-follow tooltip */}
+      {tooltip.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            left: tooltip.x + 14,
+            top: tooltip.y - 10,
+            zIndex: 9999,
+            pointerEvents: 'none',
+            transform: 'translateY(-50%)',
+          }}
+          className="bg-popover border border-border rounded-lg shadow-xl px-3 py-2 text-sm min-w-[160px] max-w-[230px]"
+        >
+          <p className="font-semibold text-foreground">
+            {tooltip.stateName} ({tooltip.stateAbbr})
+          </p>
+          {tooltip.value > 0 ? (
+            <>
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{indicadorLabel}</p>
+              <p className="mt-1 text-foreground">
+                Média:{' '}
+                <span className="font-bold tabular-nums">{tooltip.value.toFixed(2)}%</span>
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground mt-0.5">Sem dados disponíveis</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -312,8 +364,7 @@ function BrazilMapComponent({
   const top5Improved = stateEvolutions.filter(e => e.melhorou).slice(0, 5);
 
   return (
-    <TooltipProvider>
-      <div className="w-full space-y-4">
+    <div className="w-full space-y-4">
         {/* Explanation */}
         <div className="text-center p-3 bg-muted/30 rounded-lg">
           <p className="text-sm font-medium mb-1">{indicadorLabel} por Estado</p>
@@ -330,6 +381,7 @@ function BrazilMapComponent({
           <SingleMap
             data={data}
             indicador={indicador}
+            indicadorLabel={indicadorLabel}
             ano={anoInicio}
             selectedEstados={selectedEstados}
             regiao={regiao}
@@ -340,6 +392,7 @@ function BrazilMapComponent({
           <SingleMap
             data={data}
             indicador={indicador}
+            indicadorLabel={indicadorLabel}
             ano={anoFim}
             selectedEstados={selectedEstados}
             regiao={regiao}
@@ -348,9 +401,8 @@ function BrazilMapComponent({
             title={`${indicadorLabel} - Ano ${anoFim}`}
           />
         </div>
-
+        
         {/* Color Legend */}
-{/* Color Legend */}
         <div className="flex flex-col items-center gap-2 p-3 bg-muted/20 rounded-lg">
           <p className="text-xs font-medium">Legenda de Cores</p>
           <div className="flex items-center gap-2">
@@ -462,10 +514,10 @@ function BrazilMapComponent({
               ? 'Para este indicador: evolução negativa significa redução da taxa (melhora)'
               : 'Evolução medida em pontos percentuais (pp) - Aumento significa melhora'}
           </p>
-        </div>
-      </div>
-    </TooltipProvider>
+    </div>
+    </div>
   );
 }
+
 
 export const BrazilMap = memo(BrazilMapComponent);

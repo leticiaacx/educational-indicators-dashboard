@@ -126,7 +126,7 @@ export function TrendChart({ data, indicadorLabel, showTrendLine = true }: Trend
         data={plotData}
         layout={{
           autosize: true,
-          height: 450,
+          height: 550,
           margin: { t: 60, r: 40, b: 80, l: 70 },
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',

@@ -1,5 +1,5 @@
 import { useMemo, memo, useState, useCallback } from "react";
-import { ComposableMap, Geographies, Geography, Annotation } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Annotation, ZoomableGroup } from "react-simple-maps";
 import { MunicipalityData, estadosInfo, getIndicadorValue } from "@/data/educationalData";
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -165,12 +165,13 @@ function SingleMap({ data, indicador, indicadorLabel, ano, selectedEstados, regi
       <h3 className="text-sm font-medium mb-2">{title}</h3>
       <ComposableMap
         projection="geoMercator"
-        projectionConfig={{ scale: 450, center: [-54, -15] }}
-        width={400}
-        height={380}
-        style={{ width: '100%', maxWidth: '400px', height: 'auto' }}
+        projectionConfig={{ scale: 550, center: [-54, -15] }}
+        width={500}
+        height={480}
+        style={{ width: '100%', maxWidth: '750px', height: 'auto' }}
       >
-        <Geographies geography={BRAZIL_TOPOJSON_URL}>
+        <ZoomableGroup center={[0, 0]} zoom={1} maxZoom={5}>
+          <Geographies geography={BRAZIL_TOPOJSON_URL}>
           {({ geographies }) =>
             geographies.map((geo) => {
               const stateAbbr = getStateAbbr(geo);
@@ -241,6 +242,7 @@ function SingleMap({ data, indicador, indicadorLabel, ano, selectedEstados, regi
             </Annotation>
           );
         })}
+        </ZoomableGroup>
       </ComposableMap>
 
       {/* Custom mouse-follow tooltip */}
